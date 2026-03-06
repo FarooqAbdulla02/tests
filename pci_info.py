@@ -317,11 +317,11 @@ if __name__ == '__main__':
         # forwarded into add_params so they never end up in the mux input file.
         _CREDENTIAL_KEYS = {
             'peer_public_ip':  'remote_server',
-            'peer_password':   'remote_password',
             'hmc_ip':          'hmc_ip',
         }
         # These keys set an args attribute AND are forwarded to the input file.
         _CREDENTIAL_KEYS_ALSO_FORWARD = {
+            'peer_password':   'remote_password',
             'hmc_pwd':   'hmc_password',
             'vios_pwd':  'vios_pwd',
         }
@@ -523,17 +523,25 @@ if __name__ == '__main__':
             if pub_ip:
                 last_octet = pub_ip.split('.')[-1]
                 _d['host_ip'] = '192.168.10.%s' % last_octet
-                _d['host_ips'] = '192.168.10.%s 192.168.20.%s' % (last_octet, last_octet)
+                
+                # Assign host_ips based on number of interfaces
+                num_interfaces = len(_d.get('interfaces', []))
+                if num_interfaces > 1:
+                    _d['host_ips'] = '192.168.10.%s 192.168.20.%s' % (last_octet, last_octet)
+                    _d['netmasks'] = '255.255.255.0 255.255.255.0'
+                else:
+                    _d['host_ips'] = '192.168.10.%s' % last_octet
+                    _d['netmasks'] = '255.255.255.0'
+                
                 logger.info(
-                    "Derived host_ip=%s host_ips=%s from public_interface_ip=%s",
-                    _d['host_ip'], _d['host_ips'], pub_ip,
+                    "Derived host_ip=%s host_ips=%s from public_interface_ip=%s (interfaces: %d)",
+                    _d['host_ip'], _d['host_ips'], pub_ip, num_interfaces,
                 )
             else:
                 _d['host_ip'] = ''
                 _d['host_ips'] = ''
                 logger.debug("public_interface_ip not available; host_ip/host_ips left empty")
             _d['netmask'] = '255.255.255.0'
-            _d['netmasks'] = '255.255.255.0 255.255.255.0'
 
     # ------------------------------------------------------------------ #
     # Peer enrichment: when --remote-server is given, gather peer_* fields
